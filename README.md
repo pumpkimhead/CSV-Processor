@@ -3,6 +3,8 @@ A desktop tool built in Python that converts raw IQMaps CSV exports into the for
 Eliminates manual reformatting by handling column cleanup, point renumbering, elevation calculation, feature normalisation, and group tagging.
 All in a few seconds.
 
+See It in Action with the video.
+
 The Problem:
 Every IQMaps survey export needed to be cleaned by hand before Carlson could use it. Wrong column order, inconsistent labels, values that needed calculating. One mistake and the CSV processing would fail, creating even more work.
 It was slow, repetitive, and easy to get wrong.
