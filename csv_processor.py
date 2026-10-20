@@ -6,8 +6,12 @@ import webbrowser
 import sys
 import os
 
-def get_resource_path(relative_path):    
-    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
+def get_resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
     return os.path.join(base_path, relative_path)
 
 
@@ -30,6 +34,7 @@ def safe_to_float(value):
 def show_splash():
     splash = tk.Tk()
     splash.title("CSV Processor")
+    splash.iconbitmap(get_resource_path("pump_icon.ico"))
     splash.resizable(False, False)   
     splash.configure(bg="white")
     splash.overrideredirect(True)    
@@ -43,7 +48,7 @@ def show_splash():
         pass  
 
     tk.Label(splash, text="CSV Processor",            font=("Segoe UI", 20, "bold"), bg="white").pack()
-    tk.Label(splash, text="Version 1.0",               font=("Segoe UI", 10),         bg="white").pack()
+    tk.Label(splash, text="Version 1.1",               font=("Segoe UI", 10),         bg="white").pack()
     tk.Label(splash, text="Created by Erick Lucas Martins", font=("Segoe UI", 10),   bg="white").pack(pady=(5, 0))
     tk.Label(splash, text="Loading…",                  font=("Segoe UI", 11),         bg="white").pack(pady=(25, 0))
 
@@ -53,8 +58,10 @@ def show_splash():
 def show_complete(output_path):
     complete = tk.Tk()
     complete.title("CSV Processing Complete")
-    complete.resizable(False, False)
-    center_window(complete, 600, 320)
+    complete.iconbitmap(get_resource_path("pump_icon.ico"))
+    complete.resizable(True, True)
+    center_window(complete, 600, 360)
+    complete.minsize(600, 360)
 
     complete.lift()
     complete.attributes("-topmost", True)
@@ -70,9 +77,20 @@ def show_complete(output_path):
     ).pack(pady=(0, 15))
 
     file_name = os.path.basename(output_path)
-    tk.Label(frame, text=f"Output File:\n{file_name}", justify="center").pack()
 
-    tk.Label(frame, text=f"\nLocation:\n{output_path}", justify="center", wraplength=540).pack()
+    tk.Label(
+        frame,
+        text=f"Output File:\n{file_name}",
+        justify="center",
+        wraplength=500
+    ).pack()
+
+    tk.Label(
+        frame,
+        text=f"\nLocation:\n{output_path}",
+        justify="center",
+        wraplength=500
+    ).pack()
 
     tk.Label(frame, text="\nThank you for using CSV Processor.", font=("Segoe UI", 10)).pack()
     tk.Label(frame, text="Created by Erick Lucas Martins",       font=("Segoe UI", 10, "bold")).pack(pady=(5, 0))
@@ -81,10 +99,17 @@ def show_complete(output_path):
         frame,
         text="Visit GitHub",
         command=lambda: webbrowser.open("https://github.com/pumpkimhead"),
-        width=20
+        width=20,
+        height=1
     ).pack(pady=15)
 
-    tk.Button(frame, text="Close", command=complete.destroy, width=20).pack()
+    tk.Button(
+        frame,
+        text="Close",
+        command=complete.destroy,
+        width=20,
+        height=1
+    ).pack(pady=(0, 5))
 
     complete.mainloop()
 
@@ -103,18 +128,27 @@ def normalise_feature(row):
     last_word_is_4_digits = len(tokens) >= 2 and re.match(r"^\d{4}$", tokens[-1])
 
     if first_word_is_feature and last_word_is_4_digits:
-        row["FEATURE"] = "UN"
+        row["FEATURE"] = "ANOM"
         return row  
+
+    if len(tokens) == 1 and tokens[0].upper() == "B3":
+        row["FEATURE"] = "ANOM"
+        return row
 
     tokens_upper = [token.upper() for token in tokens]
 
     if "B3" in tokens_upper:
-        extra_words = [token for token in tokens if token.upper() != "B3"]
-        note_parts = ["B3"] + extra_words
-        
-        row["FEATURE"] = "UN"
-        row["NOTE"]    = " ".join(part for part in [note] + note_parts if part).strip()
-        return row
+        remaining_words = [
+            token for token in tokens
+            if token.upper() != "B3"
+        ]
+
+        row["FEATURE"] = " ".join(remaining_words)
+
+        if "B3" not in note.upper():
+            row["NOTE"] = " ".join(
+                part for part in [note, "B3"] if part
+            ).strip()
 
     return row
 
@@ -178,7 +212,7 @@ def process_csv(input_path):
 
         group_last_row = next_index - 1 
 
-        has_b3_flag = "B3" in feature.upper()
+        has_b3_flag = ("B3" in feature.upper() or "B3" in df.loc[row_index, "NOTE"].upper())
 
         clean_feature = re.sub(r"\s*\bB3\b\s*", "", feature, flags=re.IGNORECASE).strip()
         df.loc[row_index, "FEATURE"] = clean_feature
